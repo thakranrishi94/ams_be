@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+enum alumniRequestStatus {
+  PENDING
+  REJECTED
+  APPROVED
+}
+model User {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  phone    String @unique
+  password String
+  role     Role
+  status   Status @default(ACTIVE)
+
+  alumni  Alumni?
+  faculty Faculty?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ALUMNI
+  FACULTY
+  ADMIN
+}
+
+model Alumni {
+  id           Int    @id @default(autoincrement())
+  userId       Int    @unique
+  user         User   @relation(fields: [userId], references: [id])
+  course       String
+  batch        String
+  designation  String
+  organization String
+  skills       String
+  image        String?
+  requestStatus alumniRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Faculty {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @unique
+  user        User   @relation(fields: [userId], references: [id])
+  designation String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
