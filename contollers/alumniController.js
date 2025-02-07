@@ -19,13 +19,30 @@ const idSchema = z.object({
 });
 
 // Get all alumni
-const getAllAlumni = async (req, res) => {
+const getAllAlumniRequest = async (req, res) => {
   try {
     const alumni = await prisma.alumni.findMany({
       include: { user: true },
     });
     res.json(alumni);
   } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch alumni' });
+  }
+};
+
+const getAllAlumni = async (req, res) => {
+  try {
+    const alumni = await prisma.alumni.findMany({
+      where: {
+        requestStatus: 'APPROVED'
+      },
+      include: {
+        user: true
+      },
+    });
+    res.json(alumni);
+  } catch (error) {
+    console.error('Error fetching approved alumni:', error);
     res.status(500).json({ error: 'Failed to fetch alumni' });
   }
 };
@@ -49,7 +66,7 @@ const getAlumniById = async (req, res) => {
 const createAlumni = async (req, res) => {
   try {
     const data = alumniSchema.parse(req.body);
-    const alumni = await prisma.alumni.create({ data });
+    const alunmni = await prisma.alumni.create({ data });
     res.status(201).json(alumni);
   } catch (error) {
     res.status(400).json({ error: error.message || 'Failed to create alumni' });
@@ -113,32 +130,54 @@ const getRequestStatus = async (req, res) => {
 // Get alumni counts by status
 const getAlumniCount = async (req, res) => {
   try {
-    // Get total number of alumni
-    const totalCount = await prisma.alumni.count();
+    // Get total number of approved alumni
+    const totalApprovedCount = await prisma.alumni.count({
+      where: {
+        requestStatus: 'APPROVED'
+      }
+    });
 
-    // Get count of active alumni
+    // Get count of active approved alumni
     const activeCount = await prisma.alumni.count({
       where: {
+        requestStatus: 'APPROVED',
         user: {
           status: 'ACTIVE'
         }
       }
     });
 
-    // Get count of inactive alumni
+    // Get count of inactive approved alumni
     const inactiveCount = await prisma.alumni.count({
       where: {
+        requestStatus: 'APPROVED',
         user: {
           status: 'INACTIVE'
         }
       }
     });
 
+    // Get count of pending requests
+    const pendingCount = await prisma.alumni.count({
+      where: {
+        requestStatus: 'PENDING'
+      }
+    });
+
+    // Get count of rejected requests
+    const rejectedCount = await prisma.alumni.count({
+      where: {
+        requestStatus: 'REJECTED'
+      }
+    });
+
     // Return the counts
     res.status(200).json({
-      total: totalCount,
+      totalApproved: totalApprovedCount,
       active: activeCount,
-      inactive: inactiveCount
+      inactive: inactiveCount,
+      pending: pendingCount,
+      rejected: rejectedCount
     });
 
   } catch (error) {
@@ -156,5 +195,6 @@ module.exports = {
   updateAlumni,
   deleteAlumni,
   getRequestStatus,
-  getAlumniCount
+  getAlumniCount,
+  getAllAlumniRequest
 };

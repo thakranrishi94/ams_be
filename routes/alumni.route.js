@@ -10,6 +10,8 @@ router.get('/request-status', alumniController.getRequestStatus);
 
 router.get('/alumni-status',alumniController.getAlumniCount);
 
+router.get('/alumniRequest',alumniController.getAllAlumniRequest)
+
 // Get a single alumni by ID
 router.get('/:id', alumniController.getAlumniById);
 
