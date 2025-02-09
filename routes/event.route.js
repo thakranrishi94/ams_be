@@ -6,6 +6,7 @@ router.get('/',eventController.getEventRequest);
 
 router.get('/upcomingEvents',eventController.upcomingEvents);
 router.get('/pastEvents',eventController.pastEvents);
+router.get('/rejectedEvents',eventController.rejectedEvents);
 
 
 router.post('/',eventController.createEvent);

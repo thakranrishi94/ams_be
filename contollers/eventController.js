@@ -224,10 +224,38 @@ const pastEvents=async (req,res)=>{
         res.status(500).json({ error: "Failed to fetch eventRequest" });
     }
 };
+//get past events
+const rejectedEvents= async (req,res)=>{
+    try {
+        const eventRequests = await prisma.eventRequest.findMany({
+            where: {
+                requestStatus: 'REJECTED'
+            },
+            include: {
+                alumni: {
+                    include: {
+                        user: true
+                    }
+                },
+                faculty: {
+                    include: {
+                        user: true
+                    }
+                }
+            }
+        });
+
+        res.status(200).json(eventRequests);
+    } catch (error) {
+        console.error("Error fetching eventRequest:", error);
+        res.status(500).json({ error: "Failed to fetch eventRequest" });
+    }
+}
 module.exports = {
     createEvent,
     getEventRequest,
     updateEventStatus,
     upcomingEvents,
     pastEvents,
+    rejectedEvents,
 };
