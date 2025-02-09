@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 5000;
 const authRouter = require('./routes/auth.routes');
 const alumiRouter = require('./routes/alumni.route');
 const facultyRouter = require('./routes/faculty.route');
+const eventRouter=require('./routes/event.route')
 
 app.use(express.json());
 app.use(cors({origin:"*"}));
@@ -20,6 +21,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/v1/api/auth', authRouter);
 app.use('/v1/api/alumni',alumiRouter);
 app.use('/v1/api/faculty',facultyRouter);
+app.use('/v1/api/event',eventRouter);
 
 app.get('/', async (req, res) => {
   res.send('Welcome to the Express Server!');

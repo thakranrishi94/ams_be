@@ -4,6 +4,7 @@ const router = express.Router();
 const facultyController = require('../contollers/facultyController');
 
 router.get('/', facultyController.getAllFaculty);
+router.get('/active-faculty',facultyController.getActiveFaculty);
 //update faculty
 router.put('/:id', facultyController.updateFaculty);
 //update faculty status

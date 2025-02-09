@@ -15,6 +15,19 @@ const getAllFaculty = async (req, res) => {
     }
 }
 
+const getActiveFaculty=async(req,res)=>{
+    try {
+        const faculty = await prisma.faculty.findMany({
+            where: { user: { status: 'ACTIVE' } }, 
+            include: { user: true },
+        });
+
+        res.status(200).json(faculty);
+    } catch (error) {
+        console.error("Error fetching active faculty:", error);
+        res.status(500).json({ error: "Failed to fetch active faculty" });
+    }
+};
 //update
 const updateFaculty = async (req, res) => {
   try {
@@ -89,5 +102,6 @@ const updateUserStatus = async (req, res) => {
 module.exports = {
     getAllFaculty,
     updateFaculty,
-    updateUserStatus
+    updateUserStatus,
+    getActiveFaculty,
 }

@@ -30,6 +30,8 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  eventRequests EventRequest[]
+
 }
 
 enum Role {
@@ -76,11 +78,13 @@ enum RequestStatus {
   PENDING
   APPROVED
   REJECTED
+  COMPLETED
 }
 model EventRequest {
   eventRequestId     Int     @id @default(autoincrement())
-  alumniId           Int     
+  alumniId           Int?    // Changed to optional by adding ?
   facultyId          Int?    
+  adminId            Int?    
   eventTitle         String  @db.VarChar(255)
   eventDescription   String  @db.Text
   eventType          EventType
@@ -93,8 +97,9 @@ model EventRequest {
   eventAgenda        String  @db.Text
   specialRequirements String @db.Text
 
-  alumni             Alumni  @relation(fields: [alumniId], references: [id])
-  faculty           Faculty? @relation(fields: [facultyId], references: [id])
+  alumni             Alumni?  @relation(fields: [alumniId], references: [id])
+  faculty            Faculty? @relation(fields: [facultyId], references: [id])
+  admin              User?    @relation(fields: [adminId], references: [id])
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
