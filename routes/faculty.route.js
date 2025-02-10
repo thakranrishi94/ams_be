@@ -5,6 +5,7 @@ const facultyController = require('../contollers/facultyController');
 
 router.get('/', facultyController.getAllFaculty);
 router.get('/active-faculty',facultyController.getActiveFaculty);
+router.get('/available-faculty', facultyController.getAvailableFaculty);
 //update faculty
 router.put('/:id', facultyController.updateFaculty);
 //update faculty status

@@ -99,9 +99,51 @@ const updateUserStatus = async (req, res) => {
         });
     }
 };
+
+//check faculty availability
+const getAvailableFaculty = async (req, res) => {
+    try {
+        const { date } = req.query;
+        if (!date) {
+            return res.status(400).json({ error: "Date parameter is required" });
+        }
+
+        const targetDate = new Date(date);
+        
+        // Get faculty IDs already assigned on this date
+        const busyFaculty = await prisma.eventRequest.findMany({
+            where: {
+                eventDate: {
+                    gte: new Date(targetDate.setHours(0, 0, 0, 0)),
+                    lt: new Date(targetDate.setHours(23, 59, 59, 999))
+                },
+                requestStatus: "APPROVED",
+                facultyId: { not: null }
+            },
+            select: { facultyId: true }
+        });
+
+        const busyFacultyIds = busyFaculty.map(f => f.facultyId);
+
+        // Get active faculty not in busy list
+        const availableFaculty = await prisma.faculty.findMany({
+            where: {
+                user: { status: 'ACTIVE' },
+                id: { notIn: busyFacultyIds }
+            },
+            include: { user: true }
+        });
+
+        res.status(200).json(availableFaculty);
+    } catch (error) {
+        console.error("Error fetching available faculty:", error);
+        res.status(500).json({ error: "Failed to fetch available faculty" });
+    }
+};
 module.exports = {
     getAllFaculty,
     updateFaculty,
     updateUserStatus,
     getActiveFaculty,
+    getAvailableFaculty,
 }
