@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const eventRequestSchema = z.object({
     alumniId: z.number().int().positive().nullable(),
     facultyId: z.number().int().positive().nullable(),
-    adminId: z.number().int().positive().nullable(),
+    adminId: z.number().int().positive().nullable().optional(),
     eventTitle: z.string().min(1).max(255),
     eventDescription: z.string().min(1),
     eventType: z.enum(["WEBINAR", "WORKSHOP", "SEMINAR", "LECTURE"]),
@@ -28,7 +28,9 @@ const eventRequestSchema = z.object({
     eventAgenda: z.string().min(1),
     specialRequirements: z.string().min(1),
 });
-
+const updateEventLinkSchema = z.object({
+    eventLink: z.string().url("Invalid URL format").nullable().optional(),
+});
 const updateEventStatusSchema = z.object({
     requestStatus: z.enum(["APPROVED", "REJECTED"]),
     facultyId: z.number().int().positive().nullable().optional(),
@@ -41,7 +43,7 @@ const idSchema = z.object({
 const createEvent = async (req, res) => {
     try {
         const data = eventRequestSchema.parse(req.body);
-
+        data.adminId=req.user.userId;
         const event = await prisma.eventRequest.create({
             data: {
                 ...data,
@@ -251,6 +253,155 @@ const rejectedEvents= async (req,res)=>{
         res.status(500).json({ error: "Failed to fetch eventRequest" });
     }
 }
+//get event by faculty id
+const getUpcomingEventsByFaculty = async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      console.log('User ID from token:', userId);
+  
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is missing or invalid." });
+      }
+  
+      // Find faculty ID using userId
+      const faculty = await prisma.faculty.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      
+      console.log('Faculty found:', faculty);
+  
+      if (!faculty) {
+        return res.status(404).json({ error: "Faculty not found." });
+      }
+  
+      // Fetch events where facultyId matches
+      const events = await prisma.eventRequest.findMany({
+        where: {
+          facultyId: faculty.id,
+          eventDate: {
+            gte: new Date(),
+          },
+        },
+        include: {
+          alumni: {
+            select: { user: { select: { name: true } } },
+          },
+          faculty: {
+            select: { user: { select: { name: true } } },
+          },
+        },
+        orderBy: {
+          eventDate: "asc",
+        },
+      });
+  
+      console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching faculty events:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch faculty events",
+        details: error.message 
+      });
+    }
+  };
+
+//get past events by faculty id
+const getPastEventsByFaculty = async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      console.log('User ID from token:', userId);
+  
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is missing or invalid." });
+      }
+  
+      // Find faculty ID using userId
+      const faculty = await prisma.faculty.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      
+      console.log('Faculty found:', faculty);
+  
+      if (!faculty) {
+        return res.status(404).json({ error: "Faculty not found." });
+      }
+  
+      // Fetch events where facultyId matches
+      const events = await prisma.eventRequest.findMany({
+        where: {
+          facultyId: faculty.id,
+          eventDate: {
+            lt: new Date(),
+          },
+        },
+        include: {
+          alumni: {
+            select: { user: { select: { name: true } } },
+          },
+          faculty: {
+            select: { user: { select: { name: true } } },
+          },
+        },
+        orderBy: {
+          eventDate: "asc",
+        },
+      });
+  
+      console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching faculty events:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch faculty events",
+        details: error.message 
+      });
+    }
+  };
+//update link
+const updateEventLink = async (req, res) => {
+    try {
+        const { id } = idSchema.parse(req.params)
+        const { eventLink }=updateEventLinkSchema.parse(req.body)
+
+        const event = await prisma.eventRequest.findUnique({
+            where: { eventRequestId: id },
+        });
+
+        if (!event) {
+            return res.status(404).json({ error: "Event request not found" });
+        }
+
+        const updatedEvent = await prisma.eventRequest.update({
+            where: { eventRequestId: id },
+            data: {
+                eventLink: eventLink,
+            },
+            include: {
+                alumni: {
+                    include: { user: true },
+                },
+                faculty: {
+                    include: { user: true },
+                },
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Event link updated successfully",
+            event: updatedEvent,
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ error: error.errors });
+        }
+        console.error("Error updating event link:", error);
+        res.status(500).json({ error: "Failed to update event link" });
+    }
+};
 module.exports = {
     createEvent,
     getEventRequest,
@@ -258,4 +409,7 @@ module.exports = {
     upcomingEvents,
     pastEvents,
     rejectedEvents,
+    getUpcomingEventsByFaculty,
+    updateEventLink,
+    getPastEventsByFaculty,
 };
