@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const facultyController = require('../contollers/facultyController');
+const facultyController = require('../controllers/facultyController');
 
 router.get('/', facultyController.getAllFaculty);
 router.get('/active-faculty',facultyController.getActiveFaculty);

@@ -43,7 +43,22 @@ const idSchema = z.object({
 const createEvent = async (req, res) => {
     try {
         const data = eventRequestSchema.parse(req.body);
+        if(req.user.role==='ADMIN'){
         data.adminId=req.user.userId;
+        }
+        else if(req.user.role==='ALUMNI'){
+          const userId = req.user.userId;
+          //   console.log('User ID from token:', userId)
+            if (!userId) {
+              return res.status(400).json({ error: "User ID is missing or invalid." });
+            }
+            // Find alumni ID using userId
+            const alumni = await prisma.alumni.findUnique({
+              where: { userId },
+              select: { id: true },
+            });
+          data.alumniId=alumni.id;
+        }
         const event = await prisma.eventRequest.create({
             data: {
                 ...data,
@@ -257,7 +272,7 @@ const rejectedEvents= async (req,res)=>{
 const getUpcomingEventsByFaculty = async (req, res) => {
     try {
       const userId = req.user.userId;
-      console.log('User ID from token:', userId);
+    //   console.log('User ID from token:', userId);
   
       if (!userId) {
         return res.status(400).json({ error: "User ID is missing or invalid." });
@@ -269,7 +284,7 @@ const getUpcomingEventsByFaculty = async (req, res) => {
         select: { id: true },
       });
       
-      console.log('Faculty found:', faculty);
+    //   console.log('Faculty found:', faculty);
   
       if (!faculty) {
         return res.status(404).json({ error: "Faculty not found." });
@@ -296,7 +311,7 @@ const getUpcomingEventsByFaculty = async (req, res) => {
         },
       });
   
-      console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+    //   console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
       res.json(events);
     } catch (error) {
       console.error("Error fetching faculty events:", error);
@@ -311,7 +326,7 @@ const getUpcomingEventsByFaculty = async (req, res) => {
 const getPastEventsByFaculty = async (req, res) => {
     try {
       const userId = req.user.userId;
-      console.log('User ID from token:', userId);
+    //   console.log('User ID from token:', userId);
   
       if (!userId) {
         return res.status(400).json({ error: "User ID is missing or invalid." });
@@ -350,7 +365,7 @@ const getPastEventsByFaculty = async (req, res) => {
         },
       });
   
-      console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+    //   console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
       res.json(events);
     } catch (error) {
       console.error("Error fetching faculty events:", error);
@@ -359,6 +374,120 @@ const getPastEventsByFaculty = async (req, res) => {
         details: error.message 
       });
     }
+  };
+
+//get upcoming event by alumni id
+const getUpcomingEventsByAlumni = async (req, res) => {
+    try {
+      const userId = req.user.userId;
+    //   console.log('User ID from token:', userId);
+  
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is missing or invalid." });
+      }
+  
+      // Find faculty ID using userId
+      const alumni = await prisma.alumni.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      
+    //   console.log('Faculty found:', faculty);
+  
+      if (!alumni) {
+        return res.status(404).json({ error: "Faculty not found." });
+      }
+  
+      // Fetch events where facultyId matches
+      const events = await prisma.eventRequest.findMany({
+        where: {
+          alumniId: alumni.id,
+          facultyId: {
+            not: null, 
+          },
+          eventDate: {
+            gte: new Date(),
+          },
+        },
+        include: {
+          alumni: {
+            select: { user: { select: { name: true } } },
+          },
+          faculty: {
+            select: { user: { select: { name: true } } },
+          },
+        },
+        orderBy: {
+          eventDate: "asc",
+        },
+      });
+  
+    //   console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching faculty events:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch faculty events",
+        details: error.message 
+      });
+    }
+  };
+//get past events by faculty id
+const getPastEventsByAlumni = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+      //   console.log('User ID from token:', userId);
+    
+        if (!userId) {
+          return res.status(400).json({ error: "User ID is missing or invalid." });
+        }
+    
+        // Find faculty ID using userId
+        const alumni = await prisma.alumni.findUnique({
+          where: { userId },
+          select: { id: true },
+        });
+        
+        console.log('Alumni found:', alumni.id);
+    
+        if (!alumni) {
+          return res.status(404).json({ error: "Alumni not found." });
+        }
+    
+        // Fetch events where facultyId matches
+        const events = await prisma.eventRequest.findMany({
+          where: {
+            alumniId: alumni.id,
+            
+          facultyId: {
+            not: null, 
+          },
+            eventDate: {
+                lt: new Date(),
+            },
+          },
+          include: {
+            alumni: {
+              select: { user: { select: { name: true } } },
+            },
+            faculty: {
+              select: { user: { select: { name: true } } },
+            },
+          },
+          orderBy: {
+            eventDate: "asc",
+          },
+        });
+    
+      //   console.log(`Found ${events.length} events for faculty ID ${faculty.id}`);
+        res.json(events);
+      } catch (error) {
+        console.error("Error fetching faculty events:", error);
+        res.status(500).json({ 
+          error: "Failed to fetch faculty events",
+          details: error.message 
+        });
+      }
   };
 //update link
 const updateEventLink = async (req, res) => {
@@ -412,4 +541,6 @@ module.exports = {
     getUpcomingEventsByFaculty,
     updateEventLink,
     getPastEventsByFaculty,
+    getUpcomingEventsByAlumni,
+    getPastEventsByAlumni,
 };

@@ -125,6 +125,9 @@ router.post('/login', async (req, res) => {
         // Find user by email
         const user = await prisma.user.findUnique({
             where: { email },
+            include: {
+                alumni: true // Include alumni relation to check requestStatus
+            }
         });
 
         if (!user) {
@@ -136,6 +139,14 @@ router.post('/login', async (req, res) => {
 
         if (!isPasswordValid) {
             return res.status(400).json({ error: 'Invalid credentials' });
+        }
+
+        // Check if user is an ALUMNI and their requestStatus is not APPROVED
+        if (user.role === 'ALUMNI' && user.alumni && user.alumni.requestStatus !== 'APPROVED') {
+            return res.status(403).json({ 
+                error: 'Your account request is still pending approval. Please check back later.',
+                requestStatus: user.alumni.requestStatus
+            });
         }
 
         // Create JWT token
