@@ -4,7 +4,8 @@ const router = express.Router();
 const alumniController = require('../controllers/alumniController');
 const { isAuthenticated } = require('../middlewares/auth.middleware');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const storage=multer.memoryStorage();
+const upload = multer({storage});
 
 // Get all alumni
 router.get('/', alumniController.getAllAlumni);
@@ -23,7 +24,7 @@ router.post('/', alumniController.createAlumni);
 
 // Update an alumni by ID
 router.put('/update/:id',isAuthenticated, upload.none(),alumniController.updateAlumniProfile);
-router.put('/update/:id/image',isAuthenticated, upload.single('image'), alumniController.updateAlumniImage);
+router.post('/update/:id/image',isAuthenticated, upload.single('image'), alumniController.updateAlumniImage);
 
 // Delete an alumni by ID
 router.delete('/:id', alumniController.deleteAlumni);

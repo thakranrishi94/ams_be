@@ -2,8 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const { z } = require('zod');
 const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
-
-
+const cloudinary = require('cloudinary').v2
+const {Stream}=require('stream')
 // Validation schemas
 const alumniSchema = z.object({
   userId: z.number().int().positive(),
@@ -180,7 +180,7 @@ const getAlumniCount = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching alumni counts:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message || 'Failed to fetch alumni counts'
     });
   }
@@ -290,7 +290,7 @@ const updateAlumniProfile = async (req, res) => {
 
   } catch (error) {
     console.error("Update alumni error:", error);
-    
+
     // Handle unique constraint violations
     if (error.code === 'P2002') {
       return res.status(400).json({
@@ -309,12 +309,12 @@ const updateAlumniProfile = async (req, res) => {
 // Image upload handler
 const updateAlumniImage = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const alumniId = parseInt(req.params.id);
-    
+
     if (!req.file) {
       return res.status(400).json({
-        message: "No image file provided"
+        message: "No image file provided",
       });
     }
 
@@ -323,45 +323,45 @@ const updateAlumniImage = async (req, res) => {
       where: {
         id: alumniId,
         userId: userId,
-      }
+      },
     });
 
     if (!existingAlumni) {
       return res.status(404).json({
-        message: "Alumni profile not found or you don't have permission to update it"
+        message: "Alumni profile not found or you don't have permission to update it",
       });
     }
 
-    // Update with new image URL
-    const updatedAlumni = await prisma.alumni.update({
-      where: { id: alumniId },
-      data: {
-        image: req.file.path // Assuming you're using multer or similar middleware
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            role: true,
-            status: true,
+    const file = req.file;
+
+    // Upload file to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const bufferStream = new Stream.PassThrough();
+      bufferStream.end(file.buffer);
+
+      cloudinary.uploader.upload_stream(
+        { folder: 'profile' },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload failed:', error);
+            reject(error);
+          } else {
+            resolve(result);
           }
         }
-      }
+      ).end(file.buffer);
     });
-
-    res.json({
-      message: "Profile image updated successfully",
-      data: updatedAlumni
+    // Send success response
+    return res.status(200).json({
+      message: 'Profile image updated successfully',
+      imageUrl: result.secure_url,
     });
 
   } catch (error) {
-    console.error("Update alumni image error:", error);
-    res.status(500).json({
-      message: "Failed to update profile image",
-      error: error.message
+    console.error('Update alumni image error:', error);
+    return res.status(500).json({
+      message: 'Failed to update profile image',
+      error: error.message,
     });
   }
 };

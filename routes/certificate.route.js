@@ -5,6 +5,6 @@ const {isAuthenticated} = require("../middlewares/auth.middleware");
 
 
 //Routes
-router.post('/generate',certificateController.generateCertificate);
+router.post('/issue', isAuthenticated, certificateController.saveCertificate);
 
 module.exports = router;
