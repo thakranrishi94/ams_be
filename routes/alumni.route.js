@@ -23,6 +23,7 @@ router.get('/byId', isAuthenticated, alumniController.getAlumniById);
 router.post('/', alumniController.createAlumni);
 
 // Update an alumni by ID
+router.put('/update-status/:id',alumniController.updateAlumniStatus);
 router.put('/update/:id',isAuthenticated, upload.none(),alumniController.updateAlumniProfile);
 router.post('/update/:id/image',isAuthenticated, upload.single('image'), alumniController.updateAlumniImage);
 

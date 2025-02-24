@@ -4,13 +4,6 @@ const cloudinary = require('cloudinary').v2;
 const PDFDocument = require('pdfkit');
 const path = require('path');
 
-// // Configure Cloudinary
-// cloudinary.config({
-//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-//   api_key: process.env.CLOUDINARY_API_KEY,
-//   api_secret: process.env.CLOUDINARY_API_SECRET
-// });
-
 async function generateAndUploadPDF(name) {
     return new Promise((resolve, reject) => {
       try {
@@ -25,24 +18,21 @@ async function generateAndUploadPDF(name) {
         doc.on('end', async () => {
           const pdfBuffer = Buffer.concat(chunks);
           
-          // Updated Cloudinary upload configuration
+          // Simplified upload configuration
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
               folder: 'certificates',
-              resource_type: 'auto',  // Changed from 'raw' to 'auto'
-              format: 'pdf',
-              type: 'upload',
-              access_mode: 'public',  // Ensure public access
-              content_type: 'application/pdf',  // Specify content type
-              flags: 'attachment'  // This helps with viewing in browser
+              resource_type: 'raw',
+              public_id: `certificate-${Date.now()}`,  // Ensure unique filename
+              use_filename: false // Let Cloudinary handle the filename
             },
             (error, result) => {
               if (error) {
+                console.error('Upload error:', error);
                 reject(error);
               } else {
-                // Use the secure_url property and ensure it's served as PDF
-                const viewableUrl = result.secure_url.replace('/upload/', '/upload/fl_attachment/');
-                resolve(viewableUrl);
+                // Use the secure_url directly without modifications
+                resolve(result.secure_url);
               }
             }
           );
@@ -50,7 +40,7 @@ async function generateAndUploadPDF(name) {
           uploadStream.end(pdfBuffer);
         });
   
-        // Rest of your PDF generation code remains the same
+        // PDF generation code remains the same
         const templatePath = path.join(__dirname, '../assets', 'certificate-template.png');
         doc.image(templatePath, 0, 0, {
           width: doc.page.width,
@@ -69,13 +59,15 @@ async function generateAndUploadPDF(name) {
   
         doc.end();
       } catch (error) {
+        console.error('PDF generation error:', error);
         reject(error);
       }
     });
   }
-async function saveCertificate(req, res) {
+
+ async function saveCertificate(req, res) {
   try {
-    const { eventId, userId } = req.body;
+    const { eventId, alumniId } = req.body;
     
     // Verify faculty authorization from token
     const facultyId = req.user.userId;
@@ -85,9 +77,11 @@ async function saveCertificate(req, res) {
       });
     }
 
-    // Verify event exists and is completed
+    // First verify event exists
     const event = await prisma.eventRequest.findUnique({
-      where: { eventRequestId: eventId },
+      where: { 
+        eventRequestId: eventId 
+      },
       include: {
         alumni: {
           include: {
@@ -101,33 +95,32 @@ async function saveCertificate(req, res) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    if (event.requestStatus !== 'COMPLETED') {
-      return res.status(400).json({ message: 'Certificates can only be issued for completed events' });
-    }
-
-    // Check if certificate already exists
+    // Check if certificate exists - using findUnique with the unique constraint
     const existingCertificate = await prisma.certificate.findUnique({
       where: {
-        eventId_userId: {
+        eventId_alumniId: {
           eventId: eventId,
-          userId: userId
+          alumniId: alumniId
         }
       }
     });
 
     if (existingCertificate) {
-      return res.status(400).json({ message: 'Certificate already issued for this user' });
+      return res.status(400).json({ 
+        message: 'Certificate already issued for this user',
+        certificateUrl: existingCertificate.certificateUrl 
+      });
     }
 
     // Generate and upload certificate
     const recipientName = event.alumni?.user?.name || 'Participant';
     const certificateUrl = await generateAndUploadPDF(recipientName);
 
-    // Save certificate details to database
+    // Create certificate
     const certificate = await prisma.certificate.create({
       data: {
         eventId: eventId,
-        userId: userId,
+        alumniId: alumniId,
         certificateUrl: certificateUrl,
         issuerId: facultyId
       }
@@ -146,5 +139,66 @@ async function saveCertificate(req, res) {
     });
   }
 }
+  
+  // Updated getUserCertificates function to match schema
+  const getUserCertificates = async (req, res) => {
+    try {
+      const alumniId = req.params.alumniId || 1; // Get alumniId from params or default to 1
+  
+      const certificates = await prisma.certificate.findMany({
+        where: {
+          alumniId: alumniId
+        },
+        include: {
+          alumni: {
+            include: {
+              user: true
+            }
+          },
+          event: {
+            select: {
+              eventRequestId: true,
+              eventTitle: true,
+              eventDescription: true,
+              eventType: true,
+              eventDate: true,
+              eventTime: true,
+              eventDuration: true,
+              targetAudience: true,
+              requestStatus: true
+            }
+          }
+        },
+        orderBy: {
+          issuedAt: 'desc'
+        }
+      });
+  
+      if (!certificates.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'No certificates found for this user'
+        });
+      }
+  
+      return res.status(200).json({
+        success: true,
+        data: certificates,
+        message: 'Certificates retrieved successfully'
+      });
+  
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error while fetching certificates',
+        error: error.message
+      });
+    }
+  };
+  
 
-module.exports = { saveCertificate };
+module.exports = { 
+  saveCertificate,
+  getUserCertificates
+ };

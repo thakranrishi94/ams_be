@@ -31,7 +31,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   eventRequests EventRequest[]
-  certificate Certificate[]
 
 }
 
@@ -53,6 +52,7 @@ model Alumni {
   image        String?
   requestStatus alumniRequestStatus @default(PENDING)
   eventRequests EventRequest[]
+  certificate Certificate[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -112,15 +112,15 @@ model Certificate {
   id             Int            @id @default(autoincrement())
   eventId        Int
   event          EventRequest   @relation(fields: [eventId], references: [eventRequestId])
-  userId         Int
-  user           User           @relation(fields: [userId], references: [id])
+  alumniId         Int
+  alumni           Alumni           @relation(fields: [alumniId], references: [id])
   certificateUrl String
   issuedAt       DateTime       @default(now())
   issuerId       Int?           // Can be admin/faculty ID
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  @@unique([eventId, userId])
+  @@unique([eventId, alumniId])
 }
 
 model CertificateTemplate {

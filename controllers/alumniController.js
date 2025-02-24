@@ -366,6 +366,21 @@ const updateAlumniImage = async (req, res) => {
   }
 };
 
+//update Alumni Status
+const updateAlumniStatus = async (req, res) => {
+  try {
+    const { id } = idSchema.parse(req.params);
+    const data = alumniSchema.partial().parse(req.body);
+    const updatedAlumni = await prisma.alumni.update({
+      where: { id },
+      data,
+      include: { user: true },
+    });
+    res.json(updatedAlumni);
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Failed to update alumni' });
+  }
+};
 
 module.exports = {
   getAllAlumni,
@@ -376,5 +391,6 @@ module.exports = {
   deleteAlumni,
   getRequestStatus,
   getAlumniCount,
-  getAllAlumniRequest
+  getAllAlumniRequest,
+  updateAlumniStatus
 };

@@ -191,7 +191,10 @@ const upcomingEvents=async (req,res)=>{
     try {
         const eventRequests = await prisma.eventRequest.findMany({
             where: {
-                requestStatus: 'APPROVED'
+                requestStatus: 'APPROVED',
+                eventDate: {
+                  gte: new Date(),
+                },
             },
             include: {
                 alumni: {
@@ -219,7 +222,10 @@ const pastEvents=async (req,res)=>{
     try {
         const eventRequests = await prisma.eventRequest.findMany({
             where: {
-                requestStatus: 'COMPLETED'
+                // requestStatus: 'COMPLETED',
+                eventDate: {
+                  lt: new Date(),
+                },
             },
             include: {
                 alumni: {
