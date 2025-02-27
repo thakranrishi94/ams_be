@@ -12,6 +12,7 @@ const alumiRouter = require('./routes/alumni.route');
 const facultyRouter = require('./routes/faculty.route');
 const eventRouter=require('./routes/event.route')
 const certificateRouter=require('./routes/certificate.route')
+const adminRouter=require('./routes/admin.route')
 
 cloudinary.config({ 
         cloud_name: process.env.CLOUD_NAME, 
@@ -31,6 +32,7 @@ app.use('/v1/api/alumni',alumiRouter);
 app.use('/v1/api/faculty',facultyRouter);
 app.use('/v1/api/event',eventRouter);
 app.use('/v1/api/certificate',certificateRouter)
+app.use('/v1/api/admin-profile',adminRouter)
 
 app.get('/', async (req, res) => {
   res.send('Welcome to the Express Server!');
