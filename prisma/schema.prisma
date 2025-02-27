@@ -63,6 +63,7 @@ model Faculty {
   user        User   @relation(fields: [userId], references: [id])
   designation String
   school      String
+  image       String? 
   eventRequests EventRequest[]
 
   createdAt DateTime @default(now())

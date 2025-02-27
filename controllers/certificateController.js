@@ -107,7 +107,7 @@ async function generateAndUploadPDF(name) {
 
     if (existingCertificate) {
       return res.status(400).json({ 
-        message: 'Certificate already issued for this user',
+        message: 'Certificate already issued for this event',
         certificateUrl: existingCertificate.certificateUrl 
       });
     }
@@ -196,9 +196,165 @@ async function generateAndUploadPDF(name) {
       });
     }
   };
+  //get certificate by faculty
+  const getCertificatesByFaculty = async (req, res) => {
+    try {
+      const facultyUserId = req.user.userId; // User ID from JWT token
+      console.log(req.params.id);
+      // Find the faculty record using the user ID
+      const faculty = await prisma.faculty.findUnique({
+        where: {
+          userId: facultyUserId,
+        },
+      });
   
+      if (!faculty) {
+        return res.status(404).json({ message: "Faculty not found" });
+      }
+  
+      // Get certificates where this faculty is the issuer
+      const certificates = await prisma.certificate.findMany({
+        where: {
+          issuerId: facultyUserId,
+        },
+        include: {
+          event: {
+            select: {
+              eventTitle: true,
+              eventType: true,
+              eventDate: true,
+            },
+          },
+          alumni: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+              course: true,
+              batch: true,
+            },
+          },
+        },
+        orderBy: {
+          issuedAt: 'desc',
+        },
+      });
+  
+      // Format the response data
+      const formattedCertificates = certificates.map(cert => ({
+        id: cert.id,
+        eventId: cert.eventId,
+        eventName: cert.event.eventTitle,
+        eventType: cert.event.eventType,
+        eventDate: cert.event.eventDate,
+        alumniId: cert.alumniId,
+        alumniName: cert.alumni.user.name,
+        alumniEmail: cert.alumni.user.email,
+        alumniCourse: cert.alumni.course,
+        alumniBatch: cert.alumni.batch,
+        certificateUrl: cert.certificateUrl,
+        issuedAt: cert.issuedAt,
+      }));
+  
+      return res.status(200).json({
+        success: true,
+        data: formattedCertificates,
+      });
+    } catch (error) {
+      console.error("Error fetching faculty certificates:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch certificates",
+        error: error.message,
+      });
+    }
+  };
+  //get certificate by alumni
+  const getCertificatesByAlumni = async (req, res) => {
+    try {
+        const userId = req.user.userId; // Get user ID from token
 
+        // Find the alumni record using the user ID
+        const alumni = await prisma.alumni.findUnique({
+            where: {
+                userId: userId,
+            },
+            select: {
+                id: true, // Get only the alumni ID
+            }
+        });
+
+        if (!alumni) {
+            return res.status(404).json({ message: "Alumni not found" });
+        }
+
+        // Fetch certificates associated with the alumni ID
+        const certificates = await prisma.certificate.findMany({
+            where: {
+                alumniId: alumni.id,
+            },
+            include: {
+                event: {
+                    select: {
+                        eventTitle: true,
+                        eventType: true,
+                        eventDate: true,
+                    },
+                },
+                alumni: {
+                    select: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            },
+                        },
+                        course: true,
+                        batch: true,
+                    },
+                },
+            },
+            orderBy: {
+                issuedAt: 'desc',
+            },
+        });
+
+        // Format the response data
+        const formattedCertificates = certificates.map(cert => ({
+            id: cert.id,
+            eventId: cert.eventId,
+            eventName: cert.event.eventTitle,
+            eventType: cert.event.eventType,
+            eventDate: cert.event.eventDate,
+            alumniId: cert.alumniId,
+            alumniName: cert.alumni.user.name,
+            alumniEmail: cert.alumni.user.email,
+            alumniCourse: cert.alumni.course,
+            alumniBatch: cert.alumni.batch,
+            certificateUrl: cert.certificateUrl,
+            issuedAt: cert.issuedAt,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: formattedCertificates,
+        });
+    } catch (error) {
+        console.error("Error fetching alumni certificates:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch certificates",
+            error: error.message,
+        });
+    }
+};
 module.exports = { 
   saveCertificate,
-  getUserCertificates
+  getUserCertificates,
+  getCertificatesByFaculty,
+  getCertificatesByAlumni
  };
