@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2
 const {Stream}=require('stream')
-// Validation schemas
+
+// Updated validation schema with new fields
 const alumniSchema = z.object({
   userId: z.number().int().positive(),
   password: z.string().min(8).optional(),
@@ -14,6 +15,10 @@ const alumniSchema = z.object({
   organization: z.string().min(1),
   skills: z.string().min(1),
   image: z.string().url().optional(),
+  linkedin: z.string().min(1), // Made LinkedIn required
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
+  bio: z.string().optional(),
   requestStatus: z.enum(["REJECTED", "PENDING", "APPROVED"]).optional()
 });
 
@@ -80,7 +85,7 @@ const getAlumniById = async (req, res) => {
 const createAlumni = async (req, res) => {
   try {
     const data = alumniSchema.parse(req.body);
-    const alunmni = await prisma.alumni.create({ data });
+    const alumni = await prisma.alumni.create({ data });
     res.status(201).json(alumni);
   } catch (error) {
     res.status(400).json({ error: error.message || 'Failed to create alumni' });
@@ -186,7 +191,7 @@ const getAlumniCount = async (req, res) => {
   }
 };
 
-//update alumni
+// Updated updateAlumniProfile to include new fields
 const updateAlumniProfile = async (req, res) => {
   try {
     const userId = req.user.userId; // From authentication middleware
@@ -210,7 +215,7 @@ const updateAlumniProfile = async (req, res) => {
       });
     }
 
-    // Extract fields from request body
+    // Extract fields from request body including new fields
     const {
       designation,
       organization,
@@ -218,14 +223,30 @@ const updateAlumniProfile = async (req, res) => {
       password,
       name,
       phone,
-      image
+      image,
+      linkedin,
+      instagram,
+      facebook,
+      bio
     } = req.body;
-    // Prepare alumni update data
+
+    // Verify LinkedIn is provided (mandatory field)
+    if (!linkedin || linkedin.trim() === '') {
+      return res.status(400).json({
+        message: "LinkedIn profile URL is required"
+      });
+    }
+
+    // Prepare alumni update data with new fields
     const alumniUpdateData = {
       designation: designation || existingAlumni.designation,
       organization: organization || existingAlumni.organization,
       skills: skills || existingAlumni.skills,
       image: image || existingAlumni.image,
+      linkedin: linkedin,
+      instagram: instagram || existingAlumni.instagram,
+      facebook: facebook || existingAlumni.facebook,
+      bio: bio || existingAlumni.bio
     };
 
     // Prepare user update data
@@ -233,8 +254,10 @@ const updateAlumniProfile = async (req, res) => {
       name: name || existingAlumni.user.name,
       phone: phone || existingAlumni.user.phone,
     };
-    console.log(alumniUpdateData)
-    console.log(userUpdateData)
+    
+    console.log(alumniUpdateData);
+    console.log(userUpdateData);
+    
     // If password is provided, hash it
     if (password) {
       if (password.length < 8) {
@@ -366,7 +389,7 @@ const updateAlumniImage = async (req, res) => {
   }
 };
 
-//update Alumni Status
+// Update Alumni Status
 const updateAlumniStatus = async (req, res) => {
   try {
     const { id } = idSchema.parse(req.params);

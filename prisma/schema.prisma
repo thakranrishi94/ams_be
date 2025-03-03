@@ -50,6 +50,10 @@ model Alumni {
   organization String
   skills       String
   image        String?
+  linkedin     String?
+  instagram    String?
+  facebook     String?
+  bio          String?
   requestStatus alumniRequestStatus @default(PENDING)
   eventRequests EventRequest[]
   certificate Certificate[]
@@ -131,3 +135,12 @@ model CertificateTemplate {
   createdAt   DateTime @default(now())
   active      Boolean  @default(true)
 }
+
+// model Post{
+//   id          Int      @id @default(autoincrement())
+//   eventId     Int
+//   createdBy   Int
+//   images      String[] // Array of image URLs
+//   description String
+//   createdAt   DateTime @default(now())
+// }
