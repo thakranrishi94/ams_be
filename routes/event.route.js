@@ -16,6 +16,7 @@ router.get("/events/alumni/upcoming", isAuthenticated, eventController.getUpcomi
 router.get("/events/alumni/past-events", isAuthenticated, eventController.getPastEventsByAlumni);
 //authentication
 router.post('/',isAuthenticated,isEventCreator,eventController.createEvent);
+router.post('/createEventForAlumniByAdmin',isAuthenticated,isEventCreator,eventController.adminCreateEventForAlumni);
 router.put('/:id/status', eventController.updateEventStatus);
 router.put('/:id/link',eventController.updateEventLink);
 module.exports = router;

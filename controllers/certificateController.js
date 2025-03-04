@@ -51,8 +51,8 @@ async function generateAndUploadPDF(name) {
         doc.registerFont('Silentha', FontPath);
         doc.font('Silentha')
            .fontSize(50)
-           .fillColor('#000')
-           .text(name, 0, 270, {
+           .fillColor('#9e6407')
+           .text(name, 50, 270, {
              width: doc.page.width,
              align: 'center'
            });

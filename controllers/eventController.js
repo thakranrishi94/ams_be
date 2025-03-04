@@ -537,6 +537,77 @@ const updateEventLink = async (req, res) => {
         res.status(500).json({ error: "Failed to update event link" });
     }
 };
+
+//create event for alumni by admin
+
+const adminCreateEventForAlumni = async (req, res) => {
+  try {
+    // Validate input data
+    const data = eventRequestSchema.parse(req.body);
+    
+    // Check if admin is creating the event
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: "Only admin can create events on behalf of alumni" });
+    }
+    
+    // Parse date string safely
+    let eventDate;
+    try {
+      // Parse the date string (format: 'yyyy-MM-dd')
+      eventDate = new Date(data.eventDate);
+      
+      // Check if date is valid
+      if (isNaN(eventDate.getTime())) {
+        throw new Error("Invalid date format");
+      }
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid event date format" });
+    }
+    
+    // Create event with the selected alumniId
+    const event = await prisma.eventRequest.create({
+      data: {
+        alumniId: data.alumniId,
+        facultyId: null,
+        eventTitle: data.eventTitle,
+        eventDescription: data.eventDescription,
+        eventType: data.eventType,
+        eventDate: eventDate, // Using the parsed Date object
+        eventTime: data.eventTime, // Store as string in HH:MM format
+        eventDuration: data.eventDuration,
+        targetAudience: data.targetAudience,
+        eventAgenda: data.eventAgenda,
+        specialRequirements: data.specialRequirements,
+        requestStatus: "PENDING"
+      },
+      include: {
+        alumni: {
+          include: {
+            user: true
+          }
+        },
+        faculty: {
+          include: {
+            user: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      message: "Alumni event created successfully", 
+      event 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Error creating alumni event:", error);
+    res.status(500).json({ error: "Failed to create alumni event" });
+  }
+};
+
 module.exports = {
     createEvent,
     getEventRequest,
@@ -549,4 +620,5 @@ module.exports = {
     getPastEventsByFaculty,
     getUpcomingEventsByAlumni,
     getPastEventsByAlumni,
+    adminCreateEventForAlumni,
 };
