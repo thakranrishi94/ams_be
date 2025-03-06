@@ -57,6 +57,7 @@ model Alumni {
   requestStatus alumniRequestStatus @default(PENDING)
   eventRequests EventRequest[]
   certificate Certificate[]
+  JobOpportunity JobOpportunity[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -136,11 +137,33 @@ model CertificateTemplate {
   active      Boolean  @default(true)
 }
 
-// model Post{
-//   id          Int      @id @default(autoincrement())
-//   eventId     Int
-//   createdBy   Int
-//   images      String[] // Array of image URLs
-//   description String
-//   createdAt   DateTime @default(now())
-// }
+model JobOpportunity {
+  id              Int       @id @default(autoincrement())
+  alumniId        Int       // Alumni who posted the job
+  alumni          Alumni    @relation(fields: [alumniId], references: [id])
+  title           String    @db.VarChar(255)
+  company         String    @db.VarChar(255)
+  location        String    @db.VarChar(255) // Remote, Hybrid, On-site
+  jobType         JobType   // Full-time, Part-time, Internship, Freelance
+  description     String    @db.Text
+  requirements    String    @db.Text // Skills required
+  salaryRange     String?   @db.VarChar(50) // Optional salary range
+  applicationLink String?   @db.VarChar(255) // Optional external application link
+  lastDateToApply DateTime  // Deadline for application
+  requestStatus   JobRequestStatus @default(PENDING) // Admin approval
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  FREELANCE
+}
+
+enum JobRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
