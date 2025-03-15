@@ -111,6 +111,7 @@ model EventRequest {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   certificate        Certificate[]
+  eventPost          EventPost[]
 
 }
 
@@ -166,4 +167,29 @@ enum JobRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+
+model EventPost {
+  id            Int            @id @default(autoincrement())
+  eventId       Int            @unique
+  event         EventRequest   @relation(fields: [eventId], references: [eventRequestId])
+  title         String         @db.VarChar(255)
+  description   String         @db.Text
+  location      String
+  issuerId      Int?
+  startTime     DateTime
+  endTime       DateTime
+  brochureImage String?
+  attendance    String?
+  eventImages        EventImage[]        // One-to-Many relation to store multiple images
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model EventImage {
+  id         Int      @id @default(autoincrement())
+  url        String   @db.VarChar(255)
+  eventPost  EventPost @relation(fields: [eventPostId], references: [id], onDelete: Cascade)
+  eventPostId Int
 }

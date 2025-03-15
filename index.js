@@ -14,6 +14,7 @@ const eventRouter=require('./routes/event.route');
 const certificateRouter=require('./routes/certificate.route');
 const adminRouter=require('./routes/admin.route');
 const jobRouter=require('./routes/jobOpportunity.route');
+const postRouter=require('./routes/post.route');
 
 cloudinary.config({ 
         cloud_name: process.env.CLOUD_NAME, 
@@ -35,6 +36,7 @@ app.use('/v1/api/event',eventRouter);
 app.use('/v1/api/certificate',certificateRouter)
 app.use('/v1/api/admin-profile',adminRouter)
 app.use('/v1/api/job',jobRouter)
+app.use('/v1/api/post',postRouter)
 
 app.get('/', async (req, res) => {
   res.send('Welcome to the Express Server!');

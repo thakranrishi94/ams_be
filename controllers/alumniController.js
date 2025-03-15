@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2
 const {Stream}=require('stream')
-
+const sendAlumniStatusEmail = require('../services/emailService')
 // Updated validation schema with new fields
 const alumniSchema = z.object({
   userId: z.number().int().positive(),
@@ -399,6 +399,11 @@ const updateAlumniStatus = async (req, res) => {
       data,
       include: { user: true },
     });
+    if (data.status === "APPROVED" || data.status === "REJECTED") {
+      const alumniEmail = updatedAlumni.user.email;
+      const alumniName = updatedAlumni.user.name;
+      await sendAlumniStatusEmail(alumniEmail, alumniName, data.status);
+    }
     res.json(updatedAlumni);
   } catch (error) {
     res.status(400).json({ error: error.message || 'Failed to update alumni' });
