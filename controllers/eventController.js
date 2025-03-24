@@ -1,7 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const { z } = require("zod");
 const prisma = new PrismaClient();
-
+const emailService=require('../services/emailService')
 // Updated schema to match Prisma types exactly
 const eventRequestSchema = z.object({
     alumniId: z.number().int().positive().nullable(),
@@ -171,7 +171,7 @@ const updateEventStatus = async (req, res) => {
                 },
             },
         });
-
+        await emailService.sendEventStatusEmails(updatedEvent);
         res.status(200).json({
             success: true,
             message: `Event ${requestStatus.toLowerCase()} successfully`,

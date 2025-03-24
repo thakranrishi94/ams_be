@@ -249,6 +249,40 @@ const updateJobOpportunity = async (req, res) => {
     return res.status(500).json({ error: "Failed to update job opportunity" });
   }
 };
+
+const getAllJobOpportunitiesForStudent = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    
+    const jobOpportunities = await prisma.jobOpportunity.findMany({
+      where: {
+        lastDateToApply: {
+          gte: currentDate // Only jobs with deadline >= current date
+        },
+        requestStatus: "APPROVED" // Only approved jobs
+      },
+      include: {
+        alumni: {
+          select: {
+            user: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    return res.status(200).json(jobOpportunities);
+  } catch (error) {
+    console.error("Job Opportunities Fetch Error:", error);
+    return res.status(500).json({ error: "Failed to fetch job opportunities" });
+  }
+};
 module.exports={
 createJobOpportunity,
 getMyJobOpportunities,
@@ -256,4 +290,5 @@ getAllJobOpportunities,
 updateJobOpportunityStatus,
 updateJobOpportunity,
 getJobOpportunities,
+getAllJobOpportunitiesForStudent,
 }

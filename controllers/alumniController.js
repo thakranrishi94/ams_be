@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2
 const {Stream}=require('stream')
-const sendAlumniStatusEmail = require('../services/emailService')
+const emailService = require('../services/emailService')
 // Updated validation schema with new fields
 const alumniSchema = z.object({
   userId: z.number().int().positive(),
@@ -392,23 +392,47 @@ const updateAlumniImage = async (req, res) => {
 // Update Alumni Status
 const updateAlumniStatus = async (req, res) => {
   try {
+    console.log("Received request to update alumni status.");
+
     const { id } = idSchema.parse(req.params);
+    console.log(`Updating alumni with ID: ${id}`);
+
     const data = alumniSchema.partial().parse(req.body);
+    console.log("Received data:", data);
+
     const updatedAlumni = await prisma.alumni.update({
       where: { id },
       data,
-      include: { user: true },
+      include: { user: true }, // Ensure user relation is fetched
     });
-    if (data.status === "APPROVED" || data.status === "REJECTED") {
-      const alumniEmail = updatedAlumni.user.email;
-      const alumniName = updatedAlumni.user.name;
-      await sendAlumniStatusEmail(alumniEmail, alumniName, data.status);
+
+    console.log("Updated alumni:", updatedAlumni);
+
+    if (data.requestStatus === "APPROVED" || data.requestStatus === "REJECTED") {
+      console.log("Alumni status is:", data.requestStatus);
+      console.log(process.env.EMAIL_USER)
+      console.log(process.env.EMAIL_PASS)
+
+      const alumniEmail = updatedAlumni.user?.email;
+      const alumniName = updatedAlumni.user?.name;
+
+      if (alumniEmail) {
+        console.log(`Sending email to: ${alumniEmail}`);
+        await emailService.sendAlumniStatusEmail(alumniEmail, alumniName, data.requestStatus);
+      } else {
+        console.error("User email not found for alumni ID:", id);
+      }
+    } else {
+      console.log("Status is not APPROVED or REJECTED, skipping email.");
     }
+
     res.json(updatedAlumni);
   } catch (error) {
-    res.status(400).json({ error: error.message || 'Failed to update alumni' });
+    console.error("Error updating alumni:", error.message);
+    res.status(400).json({ error: error.message || "Failed to update alumni" });
   }
 };
+
 
 module.exports = {
   getAllAlumni,

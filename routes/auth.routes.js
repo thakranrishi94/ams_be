@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
-
+const { sendAlumniRegistrationEmail, sendFacultyOnboardingEmail } = require('../services/emailService');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -21,7 +21,8 @@ router.post('/register', async (req, res) => {
         school, 
         skills 
     } = req.body;
-  
+    const user_password = password;
+    
     try {
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
@@ -39,6 +40,7 @@ router.post('/register', async (req, res) => {
                     error: 'Designation and school are required for faculty registration' 
                 });
             }
+
         } else if (role === 'ALUMNI') {
             if (!batch || !course || !organization || !designation || !skills) {
                 return res.status(400).json({ 
@@ -79,6 +81,7 @@ router.post('/register', async (req, res) => {
                         school
                     }
                 });
+                await sendFacultyOnboardingEmail(email, name, designation, school, user_password);
             } else if (role === 'ALUMNI') {
                 await prisma.alumni.create({
                     data: {
@@ -90,6 +93,8 @@ router.post('/register', async (req, res) => {
                         userId: user.id
                     },
                 });
+                console.log("Sending alumni registration email to:", email);
+                await sendAlumniRegistrationEmail(email, name, user_password);
             }
             // Return the created user
             return user;
@@ -153,7 +158,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, role: user.role }, 
             process.env.JWT_SECRET, 
-            { expiresIn: '1h' }
+            { expiresIn: '7d' }
         );
 
         res.status(200).json({
