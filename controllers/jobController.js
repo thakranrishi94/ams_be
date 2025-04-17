@@ -253,11 +253,12 @@ const updateJobOpportunity = async (req, res) => {
 const getAllJobOpportunitiesForStudent = async (req, res) => {
   try {
     const currentDate = new Date();
-    
+    const oneMonthFromNow = new Date(currentDate);
+    oneMonthFromNow.setMonth(currentDate.getMonth() + 1);
     const jobOpportunities = await prisma.jobOpportunity.findMany({
       where: {
         lastDateToApply: {
-          gte: currentDate // Only jobs with deadline >= current date
+          lt: oneMonthFromNow
         },
         requestStatus: "APPROVED" // Only approved jobs
       },
