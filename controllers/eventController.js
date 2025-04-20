@@ -306,7 +306,7 @@ const getUpcomingEventsByFaculty = async (req, res) => {
         },
         include: {
           alumni: {
-            select: { user: { select: { name: true } } },
+            select: { user: { select: { name: true, email: true, phone: true } }  },
           },
           faculty: {
             select: { user: { select: { name: true } } },

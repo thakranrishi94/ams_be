@@ -106,21 +106,62 @@ const sendEventStatusEmails = async (updatedEvent) => {
   const { 
     eventTitle, 
     eventDate, 
+    eventTime,
     eventDescription,
     requestStatus,
     alumni,
     faculty
   } = updatedEvent;
 
-  // Format date for better readability
-  const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }) : 'Not specified';
+  // Format date properly accounting for timezone
+  let formattedDateTime;
+  if (eventDate) {
+    // Create a date object from eventDate
+    const date = new Date(eventDate);
+    
+    // If you have eventTime as a separate field and it's a string, parse and apply it
+    if (eventTime && typeof eventTime === 'string') {
+      try {
+        const [hours, minutes] = eventTime.split(':').map(Number);
+        date.setHours(hours, minutes, 0, 0);
+      } catch (error) {
+        console.error("Error parsing eventTime:", error);
+        // If there's an error parsing the time, just use the date
+      }
+    } else if (eventTime instanceof Date) {
+      // If eventTime is already a Date object
+      date.setHours(eventTime.getHours(), eventTime.getMinutes(), 0, 0);
+    }
+    
+    // Use specific formatting
+    formattedDateTime = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Kolkata', // Adjust if needed
+    });
+    
+    // Append the time separately
+    if (eventTime) {
+      let timeStr;
+      if (typeof eventTime === 'string') {
+        timeStr = formatTimeString(eventTime);
+      } else if (eventTime instanceof Date) {
+        const hours = eventTime.getHours();
+        const minutes = eventTime.getMinutes();
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+      } else {
+        // If eventTime is neither a string nor a Date, use a default format
+        timeStr = "Time not specified";
+      }
+      formattedDateTime += ` at ${timeStr}`;
+    }
+  } else {
+    formattedDateTime = 'Not specified';
+  }
 
   // Send email to the alumni
   if (alumni && alumni.user && alumni.user.email) {
@@ -135,7 +176,7 @@ Great news! Your event request "${eventTitle}" has been approved.
 
 Event Details:
 - Title: ${eventTitle}
-- Date: ${formattedDate}
+- Date: ${formattedDateTime}
 - Description: ${eventDescription}
 
 A faculty member has been assigned to assist with your event. You may be contacted by them for further coordination.
@@ -175,21 +216,28 @@ KR Mangalam University`;
   // Send email to the assigned faculty only if approved
   if (requestStatus === "APPROVED" && faculty && faculty.user && faculty.user.email) {
     const facultySubject = "New Event Assignment - KR Mangalam University";
+    
+    // Handle the case when there's no alumni (admin-created event)
+    const requesterInfo = alumni && alumni.user ? 
+      `Requester Information:
+- Name: ${alumni.user.name}
+- Email: ${alumni.user.email}
+- Phone: ${alumni.user.phone || "Not provided"}` : 
+      `Requester Information:
+- Event created by: Admin`;
+    
     const facultyMessage = `Dear ${faculty.user.name},
 
 You have been assigned to oversee the following event:
 
 Event Details:
 - Title: ${eventTitle}
-- Date: ${formattedDate}
+- Date: ${formattedDateTime}
 - Description: ${eventDescription}
 
-Requester Information:
-- Name: ${alumni.user.name}
-- Email: ${alumni.user.email}
-- Phone: ${alumni.user.phone || "Not provided"}
+${requesterInfo}
 
-Please coordinate with the alumni regarding the event preparations and requirements. You can contact them directly using the information provided above.
+Please coordinate with the ${alumni ? 'alumni' : 'admin'} regarding the event preparations and requirements.
 
 Thank you for your dedication to our university events.
 
@@ -209,6 +257,25 @@ KR Mangalam University`;
     }
   }
 };
+
+// Helper function to format time string - safely handle different formats
+function formatTimeString(timeStr) {
+  try {
+    // If timeStr is in HH:MM:SS format
+    const timeParts = timeStr.split(':');
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = parseInt(timeParts[1], 10);
+    
+    // Convert to 12-hour format
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+    
+    return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  } catch (error) {
+    console.error("Error formatting time string:", error);
+    return "Time format error";
+  }
+}
 
 module.exports = {
   sendAlumniStatusEmail,
